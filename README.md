@@ -29,6 +29,7 @@ An automated script to install n8n (workflow automation tool) on an Ubuntu serve
 chmod +x n8n-install.sh
 ./n8n-install.sh
 4. Следуйте подсказкам: введите домен, настройте Certbot (email, согласие, редирект).  
+
 **English**:  
 1. Download the script: click on `n8n-install.sh` → "Download".  
 2. Upload to your server: use `scp n8n-install.sh root@YOUR_IP:~` or another method.  
