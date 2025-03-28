@@ -13,6 +13,7 @@ An automated script to install n8n (workflow automation tool) on an Ubuntu serve
 - Сервер с Ubuntu (рекомендуется 20.04 или 22.04).  
 - Доступ к root или sudo.  
 - Зарегистрированный домен (например, example.com).
+
 **English**:  
 - Ubuntu server (recommended 20.04 or 22.04).  
 - Root or sudo access.  
