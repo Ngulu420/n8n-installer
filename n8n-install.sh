@@ -90,8 +90,7 @@ echo "Следуйте инструкциям:"
 echo "1. Введите email для уведомлений (например, your@email.com)"
 echo "2. Согласитесь с Terms of Service (Y)"
 echo "3. Откажитесь от рассылки EFF (N)"
-echo "4. Включите редирект HTTP → HTTPS (2)"
-sudo certbot --nginx -d "$DOMAIN"
+sudo certbot --nginx -d "$DOMAIN" --redirect
 echo "Проверка портов..."
 sudo ss -tuln | grep 80
 sudo ss -tuln | grep 443
