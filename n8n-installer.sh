@@ -1,21 +1,21 @@
 #!/bin/bash
 
-# Установка кодировки UTF-8 для корректного отображения текста
+# Установка кодировки / Set encoding
 export LC_ALL=C.UTF-8
 
-# Check if script is run as root
+# Проверка прав root / Check root privileges
 if [ "$EUID" -ne 0 ]; then
     echo "Error / Ошибка: This script must be run as root or with sudo / Скрипт должен быть запущен с правами root или через sudo."
     exit 1
 fi
 
-# Выбор языка
+# Выбор языка / Language selection
 echo -e "\e[33mSelect installation language / Выберите язык установки:\e[0m"
 echo -e "\e[33m1) English\e[0m"
 echo -e "\e[33m2) Русский\e[0m"
 read -p $'\e[33mChoose (1 or 2) / Выберите (1 или 2): \e[0m' LANG_CHOICE < /dev/tty
 
-# Определение текстов на двух языках
+# Определение текстов / Define texts
 if [ "$LANG_CHOICE" = "1" ]; then
     TITLE="Ngulu - n8n Installation"
     START_MSG="Starting n8n installation..."
@@ -96,7 +96,7 @@ else
     CLEAN_MSG="Очистка временных файлов..."
 fi
 
-# Функции установки
+# Установка базовых пакетов / Install base packages
 install_base() {
     echo "$UPDATE_MSG"
     apt update || { echo "Failed to update package list / Ошибка обновления списка пакетов"; exit 1; }
@@ -107,6 +107,7 @@ install_base() {
     apt install -y curl wget || { echo "Failed to install curl and wget / Ошибка установки curl и wget"; exit 1; }
 }
 
+# Установка Node.js / Install Node.js
 setup_node() {
     echo "$NODEJS_MSG"
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - || { echo "Failed to setup Node.js / Ошибка настройки Node.js"; exit 1; }
@@ -118,6 +119,7 @@ setup_node() {
     npm -v
 }
 
+# Установка n8n и PM2 / Install n8n and PM2
 install_n8n() {
     echo "$N8N_MSG"
     npm install -g n8n@latest || { echo "Failed to install n8n / Ошибка установки n8n"; exit 1; }
@@ -137,6 +139,7 @@ install_n8n() {
     pm2 list
 }
 
+# Настройка Nginx / Configure Nginx
 configure_nginx() {
     echo "$NGINX_MSG"
     apt install -y nginx || { echo "Failed to install Nginx / Ошибка установки Nginx"; exit 1; }
@@ -162,6 +165,7 @@ EOF
     systemctl restart nginx || { echo "Failed to restart Nginx / Ошибка перезапуска Nginx"; exit 1; }
 }
 
+# Настройка Certbot / Setup Certbot
 setup_certbot() {
     echo "$CERTBOT_MSG"
     apt install -y certbot python3-certbot-nginx || { echo "Failed to install Certbot / Ошибка установки Certbot"; exit 1; }
@@ -173,7 +177,7 @@ setup_certbot() {
     certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty || { echo "Certbot setup failed / Ошибка настройки Certbot"; exit 1; }
 }
 
-# Начало установки
+# Начало установки / Start installation
 echo "=================================================="
 echo -e "\e[33m             $TITLE             \e[0m"
 echo -e "\e[33m   ███    ██  ██████  ██    ██ ██      ██    ██  \e[0m"
@@ -184,7 +188,7 @@ echo -e "\e[33m   ██   ████  ██████   ██████
 echo "=================================================="
 echo -e "\e[36m$START_MSG\e[0m"
 
-# Configure firewall
+# Настройка файрвола / Configure firewall
 echo "$UFW_MSG"
 ufw allow OpenSSH || { echo "Failed to configure UFW / Ошибка настройки UFW"; exit 1; }
 ufw allow 80 || { echo "Failed to configure UFW / Ошибка настройки UFW"; exit 1; }
@@ -193,7 +197,7 @@ ufw allow 5678 || { echo "Failed to configure UFW / Ошибка настрой�
 ufw --force enable || { echo "Failed to enable UFW / Ошибка включения UFW"; exit 1; }
 ufw status
 
-# Prompt for domain with validation
+# Запрос домена / Domain prompt
 while true; do
     echo "--------------------------------------------------"
     echo -e "\e[33m$DOMAIN_PROMPT\e[0m"
@@ -219,24 +223,24 @@ while true; do
     fi
 done
 
-# Вызов функций установки
+# Установка компонентов / Install components
 install_base
 setup_node
 install_n8n
 configure_nginx
 setup_certbot
 
-# Проверка портов
+# Проверка портов / Check ports
 echo "$PORT_CHECK_MSG"
 ss -tuln | grep 80
 ss -tuln | grep 443
 ss -tuln | grep 5678
 
-# Очистка
+# Очистка / Cleanup
 echo "$CLEAN_MSG"
 apt autoremove -y && apt clean || { echo "Failed to clean up / Ошибка очистки"; exit 1; }
 
-# Завершение
+# Завершение / Completion
 echo "=================================================="
 echo -e "\e[33m             $END_TITLE             \e[0m"
 echo -e "\e[33m   ███    ██  ██████  ██    ██ ██      ██    ██  \e[0m"
