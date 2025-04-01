@@ -4,10 +4,10 @@
 export LC_ALL=C.UTF-8
 
 # Выбор языка
-echo -e "\e[1;33mSelect installation language / Выберите язык установки:\e[0m"
-echo -e "\e[1;33m1) English\e[0m"
-echo -e "\e[1;33m2) Русский\e[0m"
-read -p "Enter your choice (1 or 2): " LANG_CHOICE < /dev/tty
+echo -e "\e[33mSelect installation language / Выберите язык установки:\e[0m"
+echo -e "\e[33m1) English\e[0m"
+echo -e "\e[33m2) Русский\e[0m"
+read -p $'\e[33mChoose (1 or 2) / Выберите (1 или 2): \e[0m' LANG_CHOICE < /dev/tty
 
 # Определение текстов на двух языках
 if [ "$LANG_CHOICE" = "1" ]; then
@@ -88,13 +88,12 @@ fi
 
 # Начало установки
 echo "=================================================="
-echo -e "\e[1;33m             $TITLE             \e[0m"
-echo "=================================================="
-echo "   ███    ██  ██████  ██    ██ ██      ██    ██  "
-echo "   ████   ██ ██       ██    ██ ██      ██    ██  "
-echo "   ██ ██  ██ ██   ███ ██    ██ ██      ██    ██  "
-echo "   ██  ██ ██ ██    ██ ██    ██ ██      ██    ██  "
-echo "   ██   ████  ██████   ██████  ███████  ██████   "
+echo -e "\e[33m             $TITLE             \e[0m"
+echo -e "\e[33m   ███    ██  ██████  ██    ██ ██      ██    ██  \e[0m"
+echo -e "\e[33m   ████   ██ ██       ██    ██ ██      ██    ██  \e[0m"
+echo -e "\e[33m   ██ ██  ██ ██   ███ ██    ██ ██      ██    ██  \e[0m"
+echo -e "\e[33m   ██  ██ ██ ██    ██ ██    ██ ██      ██    ██  \e[0m"
+echo -e "\e[33m   ██   ████  ██████   ██████  ███████  ██████   \e[0m"
 echo "=================================================="
 echo -e "\e[36m$START_MSG\e[0m"
 echo "$CURL_WGET_MSG"
@@ -103,22 +102,22 @@ apt install -y curl wget
 
 while true; do
     echo "--------------------------------------------------"
-    echo -e "\e[1;33m$DOMAIN_PROMPT\e[0m"
+    echo "$DOMAIN_PROMPT"
     read DOMAIN < /dev/tty
     echo "--------------------------------------------------"
     echo "DEBUG: DOMAIN сейчас = '$DOMAIN'"
     if [ -z "$DOMAIN" ]; then
-        echo -e "\e[1;33m$DOMAIN_EMPTY_MSG\e[0m"
-        echo -e "\e[1;33m$DOMAIN_RETRY\e[0m"
-        echo -e "\e[1;33m$DOMAIN_EXIT\e[0m"
+        echo "$DOMAIN_EMPTY_MSG"
+        echo "$DOMAIN_RETRY"
+        echo "$DOMAIN_EXIT"
         read -p "Выберите (1 или 2): " CHOICE < /dev/tty
         case $CHOICE in
             1) continue ;;
             2) echo "$EXIT_MSG"; exit 0 ;;
-            *) echo -e "\e[1;33m$INVALID_CHOICE\e[0m" ;;
+            *) echo "$INVALID_CHOICE" ;;
         esac
     else
-        echo "$(eval echo -e "\e[1;33m$DOMAIN_ACCEPTED\e[0m")"
+        echo "$(eval echo "$DOMAIN_ACCEPTED")"
         break
     fi
 done
@@ -178,24 +177,23 @@ echo "$NGINX_RESTART_MSG"
 systemctl restart nginx
 echo "$CERTBOT_MSG"
 apt install -y certbot python3-certbot-nginx
-echo "$(eval echo -e "\e[1;33m$CERTBOT_RUN_MSG\e[0m")"
-echo -e "\e[1;33m$CERTBOT_INSTRUCTIONS\e[0m"
-echo -e "\e[1;33m$CERTBOT_EMAIL\e[0m"
-echo -e "\e[1;33m$CERTBOT_TOS\e[0m"
-echo -e "\e[1;33m$CERTBOT_EFF\e[0m"
+echo "$(eval echo "$CERTBOT_RUN_MSG")"
+echo "$CERTBOT_INSTRUCTIONS"
+echo "$CERTBOT_EMAIL"
+echo "$CERTBOT_TOS"
+echo "$CERTBOT_EFF"
 certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty
 echo "$PORT_CHECK_MSG"
 ss -tuln | grep 80
 ss -tuln | grep 443
 ss -tuln | grep 5678
 echo "=================================================="
-echo -e "\e[1;33m             $END_TITLE              \e[0m"
-echo "=================================================="
-echo "   ███    ██  ██████  ██    ██ ██      ██    ██  "
-echo "   ████   ██ ██       ██    ██ ██      ██    ██  "
-echo "   ██ ██  ██ ██   ███ ██    ██ ██      ██    ██  "
-echo "   ██  ██ ██ ██    ██ ██    ██ ██      ██    ██  "
-echo "   ██   ████  ██████   ██████  ███████  ██████   "
+echo -e "\e[33m             $END_TITLE             \e[0m"
+echo -e "\e[33m   ███    ██  ██████  ██    ██ ██      ██    ██  \e[0m"
+echo -e "\e[33m   ████   ██ ██       ██    ██ ██      ██    ██  \e[0m"
+echo -e "\e[33m   ██ ██  ██ ██   ███ ██    ██ ██      ██    ██  \e[0m"
+echo -e "\e[33m   ██  ██ ██ ██    ██ ██    ██ ██      ██    ██  \e[0m"
+echo -e "\e[33m   ██   ████  ██████   ██████  ███████  ██████   \e[0m"
 echo "=================================================="
 echo -e "\e[36m$(eval echo "$END_MSG")\e[0m"
 exit
