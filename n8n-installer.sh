@@ -214,7 +214,7 @@ while true; do
             2) echo "$EXIT_MSG"; exit 0 ;;
             *) echo "$INVALID_CHOICE" ;;
         esac
-    elif ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$ ]]; then
+    elif ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}(\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61})*\.[a-zA-Z]{2,}$ ]]; then
         echo -e "\e[33m$INVALID_DOMAIN\e[0m"
         continue
     else
