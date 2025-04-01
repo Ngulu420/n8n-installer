@@ -4,9 +4,9 @@
 export LC_ALL=C.UTF-8
 
 # Выбор языка
-echo "Select installation language / Выберите язык установки:"
-echo "1) English"
-echo "2) Русский"
+echo -e "\e[1;33mSelect installation language / Выберите язык установки:\e[0m"
+echo -e "\e[1;33m1) English\e[0m"
+echo -e "\e[1;33m2) Русский\e[0m"
 read -p "Enter your choice (1 or 2): " LANG_CHOICE < /dev/tty
 
 # Определение текстов на двух языках
@@ -88,7 +88,7 @@ fi
 
 # Начало установки
 echo "=================================================="
-echo "             $TITLE             "
+echo -e "\e[1;33m             $TITLE             \e[0m"
 echo "=================================================="
 echo "   ███    ██  ██████  ██    ██ ██      ██    ██  "
 echo "   ████   ██ ██       ██    ██ ██      ██    ██  "
@@ -96,29 +96,29 @@ echo "   ██ ██  ██ ██   ███ ██    ██ ██      �
 echo "   ██  ██ ██ ██    ██ ██    ██ ██      ██    ██  "
 echo "   ██   ████  ██████   ██████  ███████  ██████   "
 echo "=================================================="
-echo "$START_MSG"
+echo -e "\e[36m$START_MSG\e[0m"
 echo "$CURL_WGET_MSG"
 apt update
 apt install -y curl wget
 
 while true; do
     echo "--------------------------------------------------"
-    echo "$DOMAIN_PROMPT"
+    echo -e "\e[1;33m$DOMAIN_PROMPT\e[0m"
     read DOMAIN < /dev/tty
     echo "--------------------------------------------------"
     echo "DEBUG: DOMAIN сейчас = '$DOMAIN'"
     if [ -z "$DOMAIN" ]; then
-        echo "$DOMAIN_EMPTY_MSG"
-        echo "$DOMAIN_RETRY"
-        echo "$DOMAIN_EXIT"
+        echo -e "\e[1;33m$DOMAIN_EMPTY_MSG\e[0m"
+        echo -e "\e[1;33m$DOMAIN_RETRY\e[0m"
+        echo -e "\e[1;33m$DOMAIN_EXIT\e[0m"
         read -p "Выберите (1 или 2): " CHOICE < /dev/tty
         case $CHOICE in
             1) continue ;;
             2) echo "$EXIT_MSG"; exit 0 ;;
-            *) echo "$INVALID_CHOICE" ;;
+            *) echo -e "\e[1;33m$INVALID_CHOICE\e[0m" ;;
         esac
     else
-        echo "$(eval echo "$DOMAIN_ACCEPTED")"
+        echo "$(eval echo -e "\e[1;33m$DOMAIN_ACCEPTED\e[0m")"
         break
     fi
 done
@@ -178,18 +178,18 @@ echo "$NGINX_RESTART_MSG"
 systemctl restart nginx
 echo "$CERTBOT_MSG"
 apt install -y certbot python3-certbot-nginx
-echo "$(eval echo "$CERTBOT_RUN_MSG")"
-echo "$CERTBOT_INSTRUCTIONS"
-echo "$CERTBOT_EMAIL"
-echo "$CERTBOT_TOS"
-echo "$CERTBOT_EFF"
+echo "$(eval echo -e "\e[1;33m$CERTBOT_RUN_MSG\e[0m")"
+echo -e "\e[1;33m$CERTBOT_INSTRUCTIONS\e[0m"
+echo -e "\e[1;33m$CERTBOT_EMAIL\e[0m"
+echo -e "\e[1;33m$CERTBOT_TOS\e[0m"
+echo -e "\e[1;33m$CERTBOT_EFF\e[0m"
 certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty
 echo "$PORT_CHECK_MSG"
 ss -tuln | grep 80
 ss -tuln | grep 443
 ss -tuln | grep 5678
 echo "=================================================="
-echo "             $END_TITLE              "
+echo -e "\e[1;33m             $END_TITLE              \e[0m"
 echo "=================================================="
 echo "   ███    ██  ██████  ██    ██ ██      ██    ██  "
 echo "   ████   ██ ██       ██    ██ ██      ██    ██  "
@@ -197,5 +197,5 @@ echo "   ██ ██  ██ ██   ███ ██    ██ ██      �
 echo "   ██  ██ ██ ██    ██ ██    ██ ██      ██    ██  "
 echo "   ██   ████  ██████   ██████  ███████  ██████   "
 echo "=================================================="
-echo "$(eval echo "$END_MSG")"
+echo -e "\e[36m$(eval echo "$END_MSG")\e[0m"
 exit
