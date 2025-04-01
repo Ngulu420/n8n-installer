@@ -40,22 +40,22 @@
 - Выполните одну из команд в терминале вашего сервера:  
   - С использованием `curl`:  
     ```
-    bash -c "sudo apt update && sudo apt install -y curl && curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/master/n8n-install.sh | bash"
+    bash -c "sudo apt update && sudo apt install -y curl && curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/master/n8n-installer.sh | bash"
     ```  
   - С использованием `wget`:  
     ```
-    bash -c "sudo apt update && sudo apt install -y wget && wget -qO- https://raw.githubusercontent.com/Ngulu420/n8n-installer/master/n8n-install.sh | bash"
+    bash -c "sudo apt update && sudo apt install -y wget && wget -qO- https://raw.githubusercontent.com/Ngulu420/n8n-installer/master/n8n-installer.sh | bash"
     ```
 
 **English**:  
 - Run one of the following commands in your server's terminal:  
   - Using `curl`:  
     ```
-    bash -c "sudo apt update && sudo apt install -y curl && curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/master/n8n-install.sh | bash"
+    bash -c "sudo apt update && sudo apt install -y curl && curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/master/n8n-installer.sh | bash"
     ```  
   - Using `wget`:  
     ```
-    bash -c "sudo apt update && sudo apt install -y wget && wget -qO- https://raw.githubusercontent.com/Ngulu420/n8n-installer/master/n8n-install.sh | bash"
+    bash -c "sudo apt update && sudo apt install -y wget && wget -qO- https://raw.githubusercontent.com/Ngulu420/n8n-installer/master/n8n-installer.sh | bash"
     ```
 
 ---
