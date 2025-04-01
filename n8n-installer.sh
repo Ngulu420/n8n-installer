@@ -16,9 +16,9 @@ apt install -y curl wget
 while true; do
     echo "--------------------------------------------------"
     echo "Введите ваш домен (например, example.com):"
-    read DOMAIN < /dev/tty  # Читаем явно с терминала
+    read DOMAIN < /dev/tty
     echo "--------------------------------------------------"
-    echo "DEBUG: DOMAIN сейчас = '$DOMAIN'"  # Отладка
+    echo "DEBUG: DOMAIN сейчас = '$DOMAIN'"
     if [ -z "$DOMAIN" ]; then
         echo "Домен не введен. Выберите действие:"
         echo "1) Ввести заново"
@@ -95,7 +95,7 @@ echo "Следуйте инструкциям:"
 echo "1. Введите email для уведомлений (например, your@email.com)"
 echo "2. Согласитесь с Terms of Service (Y)"
 echo "3. Откажитесь от рассылки EFF (N)"
-certbot --nginx -d "$DOMAIN" --redirect --no-eff-email
+certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty
 echo "Проверка портов..."
 ss -tuln | grep 80
 ss -tuln | grep 443
