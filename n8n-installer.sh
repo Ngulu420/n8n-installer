@@ -26,7 +26,7 @@ if [ "$LANG_CHOICE" = "1" ]; then
     DOMAIN_EXIT="2) Exit"
     INVALID_CHOICE="Invalid choice, try again."
     INVALID_DOMAIN="Invalid domain format."
-    DOMAIN_ACCEPTED="Domain accepted: \$DOMAIN"
+    DOMAIN_ACCEPTED="Domain accepted: $DOMAIN"
     UPDATE_MSG="Updating system..."
     TOOLS_MSG="Installing base packages..."
     UFW_MSG="Configuring UFW firewall..."
@@ -40,19 +40,19 @@ if [ "$LANG_CHOICE" = "1" ]; then
     N8N_CHECK_MSG="Checking n8n status..."
     PORT_ERROR="Error: Port 5678 is already in use."
     NGINX_MSG="Installing Nginx..."
-    NGINX_CONFIG_MSG="Creating Nginx configuration for domain (\$DOMAIN)..."
+    NGINX_CONFIG_MSG="Creating Nginx configuration for domain $DOMAIN..."
     NGINX_ACTIVATE_MSG="Activating Nginx configuration..."
     NGINX_CHECK_MSG="Checking Nginx syntax..."
     NGINX_RESTART_MSG="Restarting Nginx..."
     CERTBOT_MSG="Installing Certbot..."
-    CERTBOT_RUN_MSG="Running Certbot for HTTPS with domain (\$DOMAIN)..."
+    CERTBOT_RUN_MSG="Running Certbot for HTTPS with domain $DOMAIN..."
     CERTBOT_INSTRUCTIONS="Follow the instructions:"
     CERTBOT_EMAIL="1. Enter email for notifications (e.g., your@email.com)"
     CERTBOT_TOS="2. Agree to Terms of Service (Y)"
     CERTBOT_EMAIL_PROMPT="Enter your email for urgent renewal and security notices (or 'c' to cancel):"
     PORT_CHECK_MSG="Checking ports..."
     END_TITLE="Ngulu - Completion"
-    END_MSG="Installation completed! Check: https://\$DOMAIN"
+    END_MSG="Installation completed! Check: https://$DOMAIN"
     EXIT_MSG="Exiting script."
     CLEAN_MSG="Cleaning up temporary files..."
 else
@@ -65,7 +65,7 @@ else
     DOMAIN_EXIT="2) Выйти"
     INVALID_CHOICE="Неверный выбор, повторите."
     INVALID_DOMAIN="Неверный формат домена."
-    DOMAIN_ACCEPTED="Домен принят: \$DOMAIN"
+    DOMAIN_ACCEPTED="Домен принят: $DOMAIN"
     UPDATE_MSG="Обновление системы..."
     TOOLS_MSG="Установка базовых пакетов..."
     UFW_MSG="Настройка файрвола UFW..."
@@ -79,19 +79,19 @@ else
     N8N_CHECK_MSG="Проверка работы n8n..."
     PORT_ERROR="Ошибка: порт 5678 уже занят."
     NGINX_MSG="Установка Nginx..."
-    NGINX_CONFIG_MSG="Создание конфигурации Nginx для домена (\$DOMAIN)..."
+    NGINX_CONFIG_MSG="Создание конфигурации Nginx для домена $DOMAIN..."
     NGINX_ACTIVATE_MSG="Активация конфигурации Nginx..."
     NGINX_CHECK_MSG="Проверка синтаксиса Nginx..."
     NGINX_RESTART_MSG="Перезапуск Nginx..."
     CERTBOT_MSG="Установка Certbot..."
-    CERTBOT_RUN_MSG="Запуск Certbot для HTTPS с доменом (\$DOMAIN)..."
+    CERTBOT_RUN_MSG="Запуск Certbot для HTTPS с доменом $DOMAIN..."
     CERTBOT_INSTRUCTIONS="Следуйте инструкциям:"
     CERTBOT_EMAIL="1. Введите email для уведомлений (например, your@email.com)"
     CERTBOT_TOS="2. Согласитесь с Terms of Service (Y)"
     CERTBOT_EMAIL_PROMPT="Введите ваш email для уведомлений о продлении и безопасности (или 'c' для отмены):"
     PORT_CHECK_MSG="Проверка портов..."
     END_TITLE="Ngulu - Завершение"
-    END_MSG="Установка завершена! Проверьте: https://\$DOMAIN"
+    END_MSG="Установка завершена! Проверьте: https://$DOMAIN"
     EXIT_MSG="Выход из скрипта."
     CLEAN_MSG="Очистка временных файлов..."
 fi
@@ -143,7 +143,7 @@ install_n8n() {
 configure_nginx() {
     echo "$NGINX_MSG"
     apt install -y nginx || { echo "Failed to install Nginx / Ошибка установки Nginx"; exit 1; }
-    echo "$(eval echo "$NGINX_CONFIG_MSG")"
+    echo "$NGINX_CONFIG_MSG"
     cat << EOF > /etc/nginx/sites-available/n8n
 server {
     listen 80;
@@ -169,11 +169,12 @@ EOF
 setup_certbot() {
     echo "$CERTBOT_MSG"
     apt install -y certbot python3-certbot-nginx || { echo "Failed to install Certbot / Ошибка установки Certbot"; exit 1; }
-    echo "$(eval echo "$CERTBOT_RUN_MSG")"
+    echo "$CERTBOT_RUN_MSG"
     echo -e "\e[33m$CERTBOT_INSTRUCTIONS\e[0m"
     echo -e "\e[33m$CERTBOT_EMAIL\e[0m"
     echo -e "\e[33m$CERTBOT_TOS\e[0m"
     echo -e "\e[33m$CERTBOT_EMAIL_PROMPT\e[0m"
+    # Примечание: Let's Encrypt имеет лимит 5 сертификатов за 7 дней для одного набора доменов / Note: Let's Encrypt has a limit of 5 certificates per 7 days for the same set of domains
     certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty || { echo "Certbot setup failed / Ошибка настройки Certbot"; exit 1; }
 }
 
@@ -218,7 +219,7 @@ while true; do
         echo -e "\e[33m$INVALID_DOMAIN\e[0m"
         continue
     else
-        echo "$(eval echo "$DOMAIN_ACCEPTED")"
+        echo "$DOMAIN_ACCEPTED"
         break
     fi
 done
@@ -249,5 +250,5 @@ echo -e "\e[33m   ██ ██  ██ ██   ███ ██    ██ █�
 echo -e "\e[33m   ██  ██ ██ ██    ██ ██    ██ ██      ██    ██  \e[0m"
 echo -e "\e[33m   ██   ████  ██████   ██████  ███████  ██████   \e[0m"
 echo "=================================================="
-echo -e "\e[36m$(eval echo "$END_MSG")\e[0m"
+echo -e "\e[36m$END_MSG\e[0m"
 exit 0
