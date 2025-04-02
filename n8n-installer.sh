@@ -52,7 +52,7 @@ if [ "$LANG_CHOICE" = "1" ]; then
     CERTBOT_EMAIL_PROMPT="Enter your email for urgent renewal and security notices (or 'c' to cancel):"
     PORT_CHECK_MSG="Checking ports..."
     END_TITLE="Ngulu - Completion"
-    END_MSG="Installation completed! Check: https://$DOMAIN"
+    # END_MSG больше не используется, заменили прямым выводом
     EXIT_MSG="Exiting script."
     CLEAN_MSG="Cleaning up temporary files..."
 else
@@ -91,7 +91,7 @@ else
     CERTBOT_EMAIL_PROMPT="Введите ваш email для уведомлений о продлении и безопасности (или 'c' для отмены):"
     PORT_CHECK_MSG="Проверка портов..."
     END_TITLE="Ngulu - Завершение"
-    END_MSG="Установка завершена! Проверьте: https://$DOMAIN"
+    # END_MSG больше не используется, заменили прямым выводом
     EXIT_MSG="Выход из скрипта."
     CLEAN_MSG="Очистка временных файлов..."
 fi
@@ -174,6 +174,7 @@ setup_certbot() {
     echo -e "\e[33m$CERTBOT_EMAIL\e[0m"
     echo -e "\e[33m$CERTBOT_TOS\e[0m"
     echo -e "\e[33m$CERTBOT_EMAIL_PROMPT\e[0m"
+    echo -e "\e[33mNote: Type your email carefully to avoid invalid characters / Примечание: Вводите email внимательно, чтобы избежать некорректных символов\e[0m"
     # Примечание: Let's Encrypt имеет лимит 5 сертификатов за 7 дней для одного набора доменов / Note: Let's Encrypt has a limit of 5 certificates per 7 days for the same set of domains
     certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty || { echo "Certbot setup failed / Ошибка настройки Certbot"; exit 1; }
 }
@@ -185,7 +186,7 @@ echo -e "\e[33m   ███    ██  ██████  ██    ██ █�
 echo -e "\e[33m   ████   ██ ██       ██    ██ ██      ██    ██  \e[0m"
 echo -e "\e[33m   ██ ██  ██ ██   ███ ██    ██ ██      ██    ██  \e[0m"
 echo -e "\e[33m   ██  ██ ██ ██    ██ ██    ██ ██      ██    ██  \e[0m"
-echo -e "\e[33m   ██   ████  ██████   ██████  ███████  ██████   \e[0m"
+echo -e "\e[33m   ██   ████  ██████   █████R  ███████  ██████   \e[0m"
 echo "=================================================="
 echo -e "\e[36m$START_MSG\e[0m"
 
@@ -250,5 +251,9 @@ echo -e "\e[33m   ██ ██  ██ ██   ███ ██    ██ █�
 echo -e "\e[33m   ██  ██ ██ ██    ██ ██    ██ ██      ██    ██  \e[0m"
 echo -e "\e[33m   ██   ████  ██████   ██████  ███████  ██████   \e[0m"
 echo "=================================================="
-echo -e "\e[36m$END_MSG\e[0m"
+if [ "$LANG_CHOICE" = "1" ]; then
+    echo -e "\e[36mInstallation completed! Check: https://$DOMAIN\e[0m"
+else
+    echo -e "\e[36mУстановка завершена! Проверьте: https://$DOMAIN\e[0m"
+fi
 exit 0
