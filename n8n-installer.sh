@@ -131,6 +131,7 @@ install_n8n() {
     fi
     export N8N_RUNNERS_ENABLED=true  # Включаем task runners
     pm2 start n8n || { echo "Ошибка запуска n8n"; exit 1; }
+    [ -f /root/.n8n/config ] && chmod 600 /root/.n8n/config  # Исправляем права файла
     echo "$PM2_SETUP_MSG"
     pm2 startup || { echo "Ошибка настройки автозапуска PM2"; exit 1; }
     pm2 save || { echo "Ошибка сохранения конфигурации PM2"; exit 1; }
@@ -138,7 +139,7 @@ install_n8n() {
     pm2 list
 }
 
-# Настройка Nginx с WebSocket
+# Настройка Nginx (только HTTP на первом этапе)
 configure_nginx() {
     echo "$NGINX_MSG"
     apt install -y nginx || { echo "Ошибка установки Nginx"; exit 1; }
@@ -147,16 +148,6 @@ configure_nginx() {
 server {
     listen 80;
     server_name $DOMAIN;
-    return 301 https://\$host\$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name $DOMAIN;
-    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     location / {
         proxy_pass http://localhost:5678;
@@ -178,7 +169,7 @@ EOF
     systemctl restart nginx || { echo "Ошибка перезапуска Nginx"; exit 1; }
 }
 
-# Настройка Certbot
+# Настройка Certbot и обновление Nginx для HTTPS
 setup_certbot() {
     echo "$CERTBOT_MSG"
     apt install -y certbot python3-certbot-nginx || { echo "Ошибка установки Certbot"; exit 1; }
@@ -189,6 +180,10 @@ setup_certbot() {
     echo -e "\e[33m$CERTBOT_EMAIL_PROMPT\e[0m"
     echo -e "\e[33mПримечание: Вводите email внимательно, чтобы избежать ошибок\e[0m"
     certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty || { echo "Ошибка настройки Certbot"; exit 1; }
+    echo "$NGINX_CHECK_MSG"
+    nginx -t || { echo "Тест конфигурации Nginx провален"; exit 1; }
+    echo "$NGINX_RESTART_MSG"
+    systemctl restart nginx || { echo "Ошибка перезапуска Nginx"; exit 1; }
 }
 
 # Начало
