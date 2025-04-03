@@ -1,21 +1,21 @@
 #!/bin/bash
 
-# Установка кодировки / Set encoding
+# Установка кодировки
 export LC_ALL=C.UTF-8
 
-# Проверка прав root / Check root privileges
+# Проверка прав root
 if [ "$EUID" -ne 0 ]; then
-    echo "Error / Ошибка: This script must be run as root or with sudo / Скрипт должен быть запущен с правами root или через sudo."
+    echo "Ошибка: Скрипт надо запускать от root или через sudo."
     exit 1
 fi
 
-# Выбор языка / Language selection
-echo -e "\e[33mSelect installation language / Выберите язык установки:\e[0m"
+# Выбор языка
+echo -e "\e[33mВыберите язык установки:\e[0m"
 echo -e "\e[33m1) English\e[0m"
 echo -e "\e[33m2) Русский\e[0m"
-read -p $'\e[33mChoose (1 or 2) / Выберите (1 или 2): \e[0m' LANG_CHOICE < /dev/tty
+read -p $'\e[33mВыберите (1 или 2): \e[0m' LANG_CHOICE < /dev/tty
 
-# Определение текстов / Define texts
+# Тексты
 if [ "$LANG_CHOICE" = "1" ]; then
     TITLE="Ngulu - n8n Installation"
     START_MSG="Starting n8n installation..."
@@ -52,7 +52,6 @@ if [ "$LANG_CHOICE" = "1" ]; then
     CERTBOT_EMAIL_PROMPT="Enter your email for urgent renewal and security notices (or 'c' to cancel):"
     PORT_CHECK_MSG="Checking ports..."
     END_TITLE="Ngulu - Completion"
-    # END_MSG больше не используется, заменили прямым выводом
     EXIT_MSG="Exiting script."
     CLEAN_MSG="Cleaning up temporary files..."
 else
@@ -60,7 +59,7 @@ else
     START_MSG="Запуск установки n8n..."
     CURL_WGET_MSG="Установка curl и wget..."
     DOMAIN_PROMPT="Введите ваш домен (например, example.com):"
-    DOMAIN_EMPTY_MSG="Домен не введен. Выберите действие:"
+    DOMAIN_EMPTY_MSG="Домен не введён. Выберите действие:"
     DOMAIN_RETRY="1) Ввести заново"
     DOMAIN_EXIT="2) Выйти"
     INVALID_CHOICE="Неверный выбор, повторите."
@@ -91,121 +90,134 @@ else
     CERTBOT_EMAIL_PROMPT="Введите ваш email для уведомлений о продлении и безопасности (или 'c' для отмены):"
     PORT_CHECK_MSG="Проверка портов..."
     END_TITLE="Ngulu - Завершение"
-    # END_MSG больше не используется, заменили прямым выводом
     EXIT_MSG="Выход из скрипта."
     CLEAN_MSG="Очистка временных файлов..."
 fi
 
-# Установка базовых пакетов / Install base packages
+# Установка базовых пакетов
 install_base() {
     echo "$UPDATE_MSG"
-    apt update || { echo "Failed to update package list / Ошибка обновления списка пакетов"; exit 1; }
-    apt upgrade -y || { echo "Failed to upgrade packages / Ошибка обновления пакетов"; exit 1; }
+    apt update || { echo "Ошибка обновления списка пакетов"; exit 1; }
+    apt upgrade -y || { echo "Ошибка обновления пакетов"; exit 1; }
     echo "$TOOLS_MSG"
-    apt install -y curl git build-essential || { echo "Failed to install base tools / Ошибка установки базовых пакетов"; exit 1; }
+    apt install -y curl git build-essential || { echo "Ошибка установки базовых пакетов"; exit 1; }
     echo "$CURL_WGET_MSG"
-    apt install -y curl wget || { echo "Failed to install curl and wget / Ошибка установки curl и wget"; exit 1; }
+    apt install -y curl wget || { echo "Ошибка установки curl и wget"; exit 1; }
 }
 
-# Установка Node.js / Install Node.js
+# Установка Node.js
 setup_node() {
     echo "$NODEJS_MSG"
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - || { echo "Failed to setup Node.js / Ошибка настройки Node.js"; exit 1; }
-    apt install -y nodejs || { echo "Failed to install Node.js / Ошибка установки Node.js"; exit 1; }
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - || { echo "Ошибка настройки Node.js"; exit 1; }
+    apt install -y nodejs || { echo "Ошибка установки Node.js"; exit 1; }
     echo "$NPM_UPDATE_MSG"
-    npm install -g npm@latest || { echo "Failed to update npm / Ошибка обновления npm"; exit 1; }
+    npm install -g npm@latest || { echo "Ошибка обновления npm"; exit 1; }
     echo "$VERSION_CHECK_MSG"
     node -v
     npm -v
 }
 
-# Установка n8n и PM2 / Install n8n and PM2
+# Установка n8n и PM2
 install_n8n() {
     echo "$N8N_MSG"
-    npm install -g n8n@latest || { echo "Failed to install n8n / Ошибка установки n8n"; exit 1; }
+    npm install -g n8n@latest || { echo "Ошибка установки n8n"; exit 1; }
     n8n --version
     echo "$PM2_MSG"
-    npm install -g pm2 || { echo "Failed to install PM2 / Ошибка установки PM2"; exit 1; }
+    npm install -g pm2 || { echo "Ошибка установки PM2"; exit 1; }
     echo "$N8N_START_MSG"
     if ss -tuln | grep -q ":5678"; then
         echo "$PORT_ERROR"
         exit 1
     fi
-    pm2 start n8n || { echo "Failed to start n8n / Ошибка запуска n8n"; exit 1; }
+    export N8N_RUNNERS_ENABLED=true  # Включаем task runners
+    pm2 start n8n || { echo "Ошибка запуска n8n"; exit 1; }
+    [ -f /root/.n8n/config ] && chmod 600 /root/.n8n/config  # Исправляем права файла
     echo "$PM2_SETUP_MSG"
-    pm2 startup || { echo "Failed to setup PM2 autostart / Ошибка настройки автозапуска PM2"; exit 1; }
-    pm2 save || { echo "Failed to save PM2 configuration / Ошибка сохранения конфигурации PM2"; exit 1; }
+    pm2 startup || { echo "Ошибка настройки автозапуска PM2"; exit 1; }
+    pm2 save || { echo "Ошибка сохранения конфигурации PM2"; exit 1; }
     echo "$N8N_CHECK_MSG"
     pm2 list
 }
 
-# Настройка Nginx / Configure Nginx
+# Настройка Nginx с WebSocket
 configure_nginx() {
     echo "$NGINX_MSG"
-    apt install -y nginx || { echo "Failed to install Nginx / Ошибка установки Nginx"; exit 1; }
+    apt install -y nginx || { echo "Ошибка установки Nginx"; exit 1; }
     echo "$NGINX_CONFIG_MSG"
     cat << EOF > /etc/nginx/sites-available/n8n
 server {
     listen 80;
     server_name $DOMAIN;
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name $DOMAIN;
+    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
     location / {
         proxy_pass http://localhost:5678;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
     }
 }
 EOF
     echo "$NGINX_ACTIVATE_MSG"
-    ln -s /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/ || { echo "Failed to activate Nginx config / Ошибка активации конфигурации Nginx"; exit 1; }
+    ln -s /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/ || { echo "Ошибка активации конфигурации Nginx"; exit 1; }
     echo "$NGINX_CHECK_MSG"
-    nginx -t || { echo "Nginx configuration test failed / Тест конфигурации Nginx провален"; exit 1; }
+    nginx -t || { echo "Тест конфигурации Nginx провален"; exit 1; }
     echo "$NGINX_RESTART_MSG"
-    systemctl restart nginx || { echo "Failed to restart Nginx / Ошибка перезапуска Nginx"; exit 1; }
+    systemctl restart nginx || { echo "Ошибка перезапуска Nginx"; exit 1; }
 }
 
-# Настройка Certbot / Setup Certbot
+# Настройка Certbot
 setup_certbot() {
     echo "$CERTBOT_MSG"
-    apt install -y certbot python3-certbot-nginx || { echo "Failed to install Certbot / Ошибка установки Certbot"; exit 1; }
+    apt install -y certbot python3-certbot-nginx || { echo "Ошибка установки Certbot"; exit 1; }
     echo "$CERTBOT_RUN_MSG"
     echo -e "\e[33m$CERTBOT_INSTRUCTIONS\e[0m"
     echo -e "\e[33m$CERTBOT_EMAIL\e[0m"
     echo -e "\e[33m$CERTBOT_TOS\e[0m"
     echo -e "\e[33m$CERTBOT_EMAIL_PROMPT\e[0m"
-    echo -e "\e[33mNote: Type your email carefully to avoid invalid characters / Примечание: Вводите email внимательно, чтобы избежать некорректных символов\e[0m"
-    # Примечание: Let's Encrypt имеет лимит 5 сертификатов за 7 дней для одного набора доменов / Note: Let's Encrypt has a limit of 5 certificates per 7 days for the same set of domains
-    certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty || { echo "Certbot setup failed / Ошибка настройки Certbot"; exit 1; }
+    echo -e "\e[33mПримечание: Вводите email внимательно, чтобы избежать ошибок\e[0m"
+    certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty || { echo "Ошибка настройки Certbot"; exit 1; }
 }
 
-# Начало установки / Start installation
+# Начало
 echo "=================================================="
 echo -e "\e[33m             $TITLE             \e[0m"
 echo -e "\e[33m   ███    ██  ██████  ██    ██ ██      ██    ██  \e[0m"
 echo -e "\e[33m   ████   ██ ██       ██    ██ ██      ██    ██  \e[0m"
 echo -e "\e[33m   ██ ██  ██ ██   ███ ██    ██ ██      ██    ██  \e[0m"
 echo -e "\e[33m   ██  ██ ██ ██    ██ ██    ██ ██      ██    ██  \e[0m"
-echo -e "\e[33m   ██   ████  ██████   █████R  ███████  ██████   \e[0m"
+echo -e "\e[33m   ██   ████  ██████   ██████  ███████  ██████   \e[0m"
 echo "=================================================="
 echo -e "\e[36m$START_MSG\e[0m"
 
-# Настройка файрвола / Configure firewall
+# Настройка файрвола
 echo "$UFW_MSG"
-ufw allow OpenSSH || { echo "Failed to configure UFW / Ошибка настройки UFW"; exit 1; }
-ufw allow 80 || { echo "Failed to configure UFW / Ошибка настройки UFW"; exit 1; }
-ufw allow 443 || { echo "Failed to configure UFW / Ошибка настройки UFW"; exit 1; }
-ufw allow 5678 || { echo "Failed to configure UFW / Ошибка настройки UFW"; exit 1; }
-ufw --force enable || { echo "Failed to enable UFW / Ошибка включения UFW"; exit 1; }
+ufw allow OpenSSH || { echo "Ошибка настройки UFW"; exit 1; }
+ufw allow 80 || { echo "Ошибка настройки UFW"; exit 1; }
+ufw allow 443 || { echo "Ошибка настройки UFW"; exit 1; }
+ufw allow 5678 || { echo "Ошибка настройки UFW"; exit 1; }
+ufw --force enable || { echo "Ошибка включения UFW"; exit 1; }
 ufw status
 
-# Запрос домена / Domain prompt
+# Запрос домена
 while true; do
     echo "--------------------------------------------------"
     echo -e "\e[33m$DOMAIN_PROMPT\e[0m"
     read DOMAIN < /dev/tty
     echo "--------------------------------------------------"
-    echo "DEBUG: DOMAIN сейчас = '$DOMAIN'"
     if [ -z "$DOMAIN" ]; then
         echo -e "\e[33m$DOMAIN_EMPTY_MSG\e[0m"
         echo -e "\e[33m$DOMAIN_RETRY\e[0m"
@@ -225,24 +237,24 @@ while true; do
     fi
 done
 
-# Установка компонентов / Install components
+# Установка
 install_base
 setup_node
 install_n8n
 configure_nginx
 setup_certbot
 
-# Проверка портов / Check ports
+# Проверка портов
 echo "$PORT_CHECK_MSG"
 ss -tuln | grep 80
 ss -tuln | grep 443
 ss -tuln | grep 5678
 
-# Очистка / Cleanup
+# Очистка
 echo "$CLEAN_MSG"
-apt autoremove -y && apt clean || { echo "Failed to clean up / Ошибка очистки"; exit 1; }
+apt autoremove -y && apt clean || { echo "Ошибка очистки"; exit 1; }
 
-# Завершение / Completion
+# Завершение
 echo "=================================================="
 echo -e "\e[33m             $END_TITLE             \e[0m"
 echo -e "\e[33m   ███    ██  ██████  ██    ██ ██      ██    ██  \e[0m"
