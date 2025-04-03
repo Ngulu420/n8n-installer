@@ -131,7 +131,6 @@ install_n8n() {
     fi
     export N8N_RUNNERS_ENABLED=true  # Включаем task runners
     pm2 start n8n || { echo "Ошибка запуска n8n"; exit 1; }
-    [ -f /root/.n8n/config ] && chmod 600 /root/.n8n/config  # Исправляем права файла
     echo "$PM2_SETUP_MSG"
     pm2 startup || { echo "Ошибка настройки автозапуска PM2"; exit 1; }
     pm2 save || { echo "Ошибка сохранения конфигурации PM2"; exit 1; }
