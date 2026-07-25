@@ -6,7 +6,9 @@ n8n-installer — автоматическая установка n8n + Postgres
 --------------------------------
 Скопируйте и вставьте эту одну строку в терминал на вашем сервере (будет скачан и запущен скрипт как root):
 
+```bash
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/main/n8n-installer.sh)"
+```
 
 Кратко (RU)
 ------------
@@ -35,17 +37,29 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-instal
 
 Краткая инструкция по использованию
 1. Склонируйте репозиторий (опционально):
-   git clone https://github.com/Ngulu420/n8n-installer.git
+
+```bash
+git clone https://github.com/Ngulu420/n8n-installer.git
+```
+
 2. Запустите (рекомендуемый однострочник):
-   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/main/n8n-installer.sh)"
+
+```bash
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/main/n8n-installer.sh)"
+```
+
 3. Следуйте подсказкам: язык → домен → часовой пояс.
 
 Точки внимания / отладка
 - Если certbot не может получить сертификат: проверьте DNS и доступность портов 80/443 (провайдер может блокировать).
 - Если apt падает с 404: выполните `sudo apt update` и перезапустите скрипт.
 - Просмотр логов контейнеров:
-  - docker compose logs -f n8n
-  - docker compose logs -f postgres
+
+```bash
+docker compose logs -f n8n
+
+docker compose logs -f postgres
+```
 
 Безопасность
 - Файл `/opt/n8n/.env` содержит секреты и создаётся с правами 600.
@@ -54,9 +68,16 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-instal
 
 Обновление и бэкап
 - Обновить образы:
-  docker compose pull && docker compose up -d
+
+```bash
+docker compose pull && docker compose up -d
+```
+
 - Бекап Postgres (пример):
-  docker exec -t <postgres_container> pg_dumpall -c -U n8n > dump_$(date +%F).sql
+
+```bash
+docker exec -t <postgres_container> pg_dumpall -c -U n8n > dump_$(date +%F).sql
+```
 
 ------------
 
@@ -67,7 +88,9 @@ Quick install (single command)
 ------------------------------
 Copy and paste this single line into your server terminal (it downloads and runs the script as root):
 
+```bash
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/main/n8n-installer.sh)"
+```
 
 Overview
 --------
@@ -96,7 +119,11 @@ Before you run
 Usage
 1. (optional) git clone https://github.com/Ngulu420/n8n-installer.git
 2. Run (recommended single-line):
-   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/main/n8n-installer.sh)"
+
+```bash
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/main/n8n-installer.sh)"
+```
+
 3. Follow the prompts.
 
 Troubleshooting
