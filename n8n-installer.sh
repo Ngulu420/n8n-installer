@@ -1,183 +1,176 @@
 #!/bin/bash
 set -uo pipefail
-
-# Установка кодировки
-export LC_ALL=C.UTF-8
 export DEBIAN_FRONTEND=noninteractive
 
-# Версия n8n для установки. По умолчанию — latest, можно зафиксировать конкретную версию.
-N8N_VERSION="${N8N_VERSION:-latest}"
-
-# Проверка прав root
 if [ "$EUID" -ne 0 ]; then
-    echo "Ошибка: Скрипт надо запускать от root или через sudo."
+    echo "Error: run as root or with sudo. / Запускай от root или через sudo."
     exit 1
 fi
 
+INSTALL_DIR="/opt/n8n"
+
 # Выбор языка
-echo -e "\e[33mВыберите язык установки:\e[0m"
+echo -e "\e[33mВыберите язык установки / Choose install language:\e[0m"
 echo -e "\e[33m1) English\e[0m"
 echo -e "\e[33m2) Русский\e[0m"
 read -p $'\e[33mВыберите (1 или 2): \e[0m' LANG_CHOICE < /dev/tty
 
-# Тексты
 if [ "$LANG_CHOICE" = "1" ]; then
-    TITLE="Ngulu - n8n Installation"
-    START_MSG="Starting n8n installation..."
-    CURL_WGET_MSG="Installing curl and wget..."
     DOMAIN_PROMPT="Enter your domain (e.g., example.com):"
-    DOMAIN_EMPTY_MSG="Domain not entered. Choose an action:"
-    DOMAIN_RETRY="1) Try again"
-    DOMAIN_EXIT="2) Exit"
-    INVALID_CHOICE="Invalid choice, try again."
-    INVALID_DOMAIN="Invalid domain format."
-    DOMAIN_ACCEPTED_PREFIX="Domain accepted:"
-    UPDATE_MSG="Updating system..."
-    TOOLS_MSG="Installing base packages..."
+    INVALID_DOMAIN="Invalid domain format, try again."
+    TZ_PROMPT="Timezone (Enter = Etc/UTC, e.g. Europe/London):"
+    DOCKER_MSG="Installing Docker..."
+    DOCKER_SKIP="Docker already installed, skipping."
     UFW_MSG="Configuring UFW firewall..."
-    NODEJS_MSG="Installing Node.js 22.x LTS..."
-    NPM_UPDATE_MSG="Updating npm to the latest version..."
-    VERSION_CHECK_MSG="Checking Node.js and npm versions..."
-    N8N_MSG="Installing n8n (version: $N8N_VERSION)..."
-    PM2_MSG="Installing PM2..."
-    N8N_START_MSG="Starting n8n via PM2..."
-    PM2_SETUP_MSG="Setting up PM2 autostart..."
-    N8N_CHECK_MSG="Checking n8n status..."
-    PORT_ERROR="Error: Port 5678 is already in use."
-    NGINX_MSG="Installing Nginx..."
-    NGINX_CONFIG_MSG_PREFIX="Creating Nginx configuration for domain"
-    NGINX_ACTIVATE_MSG="Activating Nginx configuration..."
-    NGINX_CHECK_MSG="Checking Nginx syntax..."
-    NGINX_RESTART_MSG="Restarting Nginx..."
-    CERTBOT_MSG="Installing Certbot..."
-    CERTBOT_RUN_MSG_PREFIX="Running Certbot for HTTPS with domain"
-    CERTBOT_INSTRUCTIONS="Follow the instructions:"
-    CERTBOT_EMAIL="1. Enter email for notifications (e.g., your@email.com)"
-    CERTBOT_TOS="2. Agree to Terms of Service (Y)"
-    CERTBOT_EMAIL_PROMPT="Enter your email for urgent renewal and security notices (or 'c' to cancel):"
-    PORT_CHECK_MSG="Checking ports..."
-    FIREWALL_CLOSE_MSG="Closing direct external access to port 5678 (traffic now goes through Nginx on 443)..."
-    END_TITLE="Ngulu - Completion"
-    EXIT_MSG="Exiting script."
-    CLEAN_MSG="Cleaning up temporary files..."
-    RENEW_TEST_MSG="Testing certificate auto-renewal (dry run)..."
+    UFW_SKIP="UFW not found, skipping firewall setup."
+    COMPOSE_MSG="Starting containers..."
+    COMPOSE_ERROR="Error starting containers"
+    NGINX_ERROR="Nginx config test failed"
+    RENEW_WARN="Warning: check certificate auto-renewal manually (certbot renew --dry-run)."
+    DONE_MSG="Done: https://"
+    FILES_MSG="Config files: $INSTALL_DIR (.env contains secrets — keep it safe)"
+    CMDS_MSG="Commands: docker compose logs -f n8n | docker compose restart | docker compose pull && docker compose up -d"
 else
-    TITLE="Ngulu - n8n Установка"
-    START_MSG="Запуск установки n8n..."
-    CURL_WGET_MSG="Установка curl и wget..."
-    DOMAIN_PROMPT="Введите ваш домен (например, example.com):"
-    DOMAIN_EMPTY_MSG="Домен не введён. Выберите действие:"
-    DOMAIN_RETRY="1) Ввести заново"
-    DOMAIN_EXIT="2) Выйти"
-    INVALID_CHOICE="Неверный выбор, повторите."
-    INVALID_DOMAIN="Неверный формат домена."
-    DOMAIN_ACCEPTED_PREFIX="Домен принят:"
-    UPDATE_MSG="Обновление системы..."
-    TOOLS_MSG="Установка базовых пакетов..."
+    DOMAIN_PROMPT="Введите домен (например example.com):"
+    INVALID_DOMAIN="Неверный формат домена, попробуй ещё раз."
+    TZ_PROMPT="Часовой пояс (Enter = Etc/UTC, пример: Europe/Moscow):"
+    DOCKER_MSG="Устанавливаю Docker..."
+    DOCKER_SKIP="Docker уже установлен, пропускаю."
     UFW_MSG="Настройка файрвола UFW..."
-    NODEJS_MSG="Установка Node.js 22.x LTS..."
-    NPM_UPDATE_MSG="Обновление npm до последней версии..."
-    VERSION_CHECK_MSG="Проверка версий Node.js и npm..."
-    N8N_MSG="Установка n8n (версия: $N8N_VERSION)..."
-    PM2_MSG="Установка PM2..."
-    N8N_START_MSG="Запуск n8n через PM2..."
-    PM2_SETUP_MSG="Настройка автозапуска PM2..."
-    N8N_CHECK_MSG="Проверка работы n8n..."
-    PORT_ERROR="Ошибка: порт 5678 уже занят."
-    NGINX_MSG="Установка Nginx..."
-    NGINX_CONFIG_MSG_PREFIX="Создание конфигурации Nginx для домена"
-    NGINX_ACTIVATE_MSG="Активация конфигурации Nginx..."
-    NGINX_CHECK_MSG="Проверка синтаксиса Nginx..."
-    NGINX_RESTART_MSG="Перезапуск Nginx..."
-    CERTBOT_MSG="Установка Certbot..."
-    CERTBOT_RUN_MSG_PREFIX="Запуск Certbot для HTTPS с доменом"
-    CERTBOT_INSTRUCTIONS="Следуйте инструкциям:"
-    CERTBOT_EMAIL="1. Введите email для уведомлений (например, your@email.com)"
-    CERTBOT_TOS="2. Согласитесь с Terms of Service (Y)"
-    CERTBOT_EMAIL_PROMPT="Введите ваш email для уведомлений о продлении и безопасности (или 'c' для отмены):"
-    PORT_CHECK_MSG="Проверка портов..."
-    FIREWALL_CLOSE_MSG="Закрываем прямой внешний доступ к порту 5678 (трафик теперь идёт через Nginx на 443)..."
-    END_TITLE="Ngulu - Завершение"
-    EXIT_MSG="Выход из скрипта."
-    CLEAN_MSG="Очистка временных файлов..."
-    RENEW_TEST_MSG="Проверка автопродления сертификата (тестовый прогон)..."
+    UFW_SKIP="UFW не найден, пропускаю настройку файрвола."
+    COMPOSE_MSG="Запускаю контейнеры..."
+    COMPOSE_ERROR="Ошибка запуска контейнеров"
+    NGINX_ERROR="Тест конфигурации Nginx провален"
+    RENEW_WARN="Предупреждение: проверь автопродление вручную (certbot renew --dry-run)."
+    DONE_MSG="Готово: https://"
+    FILES_MSG="Файлы конфига: $INSTALL_DIR (.env содержит пароли — храни в секрете)"
+    CMDS_MSG="Команды: docker compose logs -f n8n | docker compose restart | docker compose pull && docker compose up -d"
 fi
 
-# Установка базовых пакетов
-install_base() {
-    echo "$UPDATE_MSG"
-    apt update || { echo "Ошибка обновления списка пакетов"; exit 1; }
-    apt -o Dpkg::Options::="--force-confold" upgrade -y || { echo "Ошибка обновления пакетов"; exit 1; }
-
-    echo "$TOOLS_MSG"
-    apt install -y curl wget git build-essential || { echo "Ошибка установки базовых пакетов"; exit 1; }
-}
-
-# Установка Node.js
-setup_node() {
-    echo "$NODEJS_MSG"
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - || { echo "Ошибка настройки Node.js"; exit 1; }
-    apt install -y nodejs || { echo "Ошибка установки Node.js"; exit 1; }
-
-    echo "$NPM_UPDATE_MSG"
-    npm install -g npm@latest || { echo "Ошибка обновления npm"; exit 1; }
-
-    echo "$VERSION_CHECK_MSG"
-    node -v
-    npm -v
-}
-
-# Установка n8n и PM2
-install_n8n() {
-    echo "$N8N_MSG"
-    # Новые версии npm (12+) по умолчанию блокируют установку зависимостей,
-    # которые качаются не с npm-реестра, а по прямой ссылке (allow-remote=none).
-    # У n8n одна из зависимостей (xlsx/SheetJS) официально распространяется
-    # именно так — с cdn.sheetjs.com, а не через npm registry. Разрешаем это явно.
-    npm config set allow-remote all -g
-    npm install -g "n8n@${N8N_VERSION}" || { echo "Ошибка установки n8n"; exit 1; }
-    n8n --version
-
-    echo "$PM2_MSG"
-    npm install -g pm2 || { echo "Ошибка установки PM2"; exit 1; }
-
-    echo "$N8N_START_MSG"
-    if ss -tuln | grep -E "LISTEN.*:5678\s" &>/dev/null; then
-        echo "$PORT_ERROR"
-        exit 1
+# ── Домен ─────────────────────────────────────────────
+while true; do
+    read -p "$DOMAIN_PROMPT " DOMAIN < /dev/tty
+    if [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}(\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61})*\.[a-zA-Z]{2,}$ ]]; then
+        break
     fi
+    echo "$INVALID_DOMAIN"
+done
 
-    # Переменные окружения n8n: раннеры + корректные HTTPS-адреса за Nginx-прокси
-    export N8N_RUNNERS_ENABLED=true
-    export N8N_PROTOCOL=https
-    export N8N_HOST="$DOMAIN"
-    export WEBHOOK_URL="https://$DOMAIN/"
-    export N8N_EDITOR_BASE_URL="https://$DOMAIN/"
+read -p "$TZ_PROMPT " TZ_INPUT < /dev/tty
+GENERIC_TIMEZONE="${TZ_INPUT:-Etc/UTC}"
 
-    pm2 start n8n --name n8n --update-env || { echo "Ошибка запуска n8n"; exit 1; }
-    [ -f /root/.n8n/config ] && chmod 600 /root/.n8n/config # Исправляем права файла
+# ── Docker Engine + Compose plugin (официальный apt-репозиторий) ──
+if ! command -v docker &> /dev/null; then
+    echo "$DOCKER_MSG"
+    apt update
+    apt install -y ca-certificates curl gnupg
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+        > /etc/apt/sources.list.d/docker.list
+    apt update
+    apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
+        || { echo "Docker install failed"; exit 1; }
+    systemctl enable --now docker
+else
+    echo "$DOCKER_SKIP"
+fi
 
-    echo "$PM2_SETUP_MSG"
-    pm2 startup systemd -u root --hp /root || { echo "Ошибка настройки автозапуска PM2"; exit 1; }
-    pm2 save || { echo "Ошибка сохранения конфигурации PM2"; exit 1; }
+# ── UFW ───────────────────────────────────────────────
+if command -v ufw &> /dev/null; then
+    echo "$UFW_MSG"
+    ufw allow OpenSSH
+    ufw allow 80
+    ufw allow 443
+    ufw --force enable
+    # Порт 5678 намеренно НЕ открываем — контейнер слушает только 127.0.0.1,
+    # доступ снаружи идёт исключительно через Nginx на 443.
+else
+    echo "$UFW_SKIP"
+fi
 
-    echo "$N8N_CHECK_MSG"
-    pm2 list
-}
+# ── Секреты и конфиг ─────────────────────────────────
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR"
 
-# Настройка Nginx (только HTTP на первом этапе)
-configure_nginx() {
-    echo "$NGINX_MSG"
-    apt install -y nginx || { echo "Ошибка установки Nginx"; exit 1; }
+POSTGRES_PASSWORD=$(openssl rand -hex 20)
+N8N_ENCRYPTION_KEY=$(openssl rand -hex 32)
 
-    echo "$NGINX_CONFIG_MSG_PREFIX $DOMAIN..."
-    cat << EOF > /etc/nginx/sites-available/n8n
+cat > "$INSTALL_DIR/.env" << EOF
+DOMAIN=$DOMAIN
+GENERIC_TIMEZONE=$GENERIC_TIMEZONE
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+N8N_ENCRYPTION_KEY=$N8N_ENCRYPTION_KEY
+EOF
+chmod 600 "$INSTALL_DIR/.env"
+
+cat > "$INSTALL_DIR/docker-compose.yml" << 'EOF'
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: n8n
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: "json-file"
+      options: { max-size: "10m", max-file: "3" }
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      N8N_HOST: ${DOMAIN}
+      N8N_PROTOCOL: https
+      WEBHOOK_URL: https://${DOMAIN}/
+      N8N_EDITOR_BASE_URL: https://${DOMAIN}/
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE}
+      TZ: ${GENERIC_TIMEZONE}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    logging:
+      driver: "json-file"
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  postgres_data:
+  n8n_data:
+EOF
+
+echo "$COMPOSE_MSG"
+docker compose up -d || { echo "$COMPOSE_ERROR"; exit 1; }
+
+# ── Nginx (нативно на хосте) ──────────────────────────
+apt install -y nginx
+cat << EOF > /etc/nginx/sites-available/n8n
 server {
     listen 80;
     server_name $DOMAIN;
-
     location / {
-        proxy_pass http://localhost:5678;
+        proxy_pass http://127.0.0.1:5678;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -188,132 +181,20 @@ server {
     }
 }
 EOF
+[ -e /etc/nginx/sites-enabled/n8n ] || ln -s /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t || { echo "$NGINX_ERROR"; exit 1; }
+systemctl restart nginx
 
-    echo "$NGINX_ACTIVATE_MSG"
-    if [ ! -e /etc/nginx/sites-enabled/n8n ]; then
-        ln -s /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/ || { echo "Ошибка активации конфигурации Nginx"; exit 1; }
-    fi
-    # Убираем дефолтный конфиг Nginx, чтобы не конфликтовал с доменом
-    [ -e /etc/nginx/sites-enabled/default ] && rm -f /etc/nginx/sites-enabled/default
+# ── Certbot ───────────────────────────────────────────
+apt install -y certbot python3-certbot-nginx
+certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty
+nginx -t || { echo "$NGINX_ERROR"; exit 1; }
+systemctl restart nginx
+certbot renew --dry-run || echo "$RENEW_WARN"
 
-    echo "$NGINX_CHECK_MSG"
-    nginx -t || { echo "Тест конфигурации Nginx провален"; exit 1; }
-
-    echo "$NGINX_RESTART_MSG"
-    systemctl restart nginx || { echo "Ошибка перезапуска Nginx"; exit 1; }
-}
-
-# Настройка Certbot и обновление Nginx для HTTPS
-setup_certbot() {
-    echo "$CERTBOT_MSG"
-    apt install -y certbot python3-certbot-nginx || { echo "Ошибка установки Certbot"; exit 1; }
-
-    echo "$CERTBOT_RUN_MSG_PREFIX $DOMAIN..."
-    echo -e "\e[33m$CERTBOT_INSTRUCTIONS\e[0m"
-    echo -e "\e[33m$CERTBOT_EMAIL\e[0m"
-    echo -e "\e[33m$CERTBOT_TOS\e[0m"
-    echo -e "\e[33m$CERTBOT_EMAIL_PROMPT\e[0m"
-    echo -e "\e[33mПримечание: Вводите email внимательно, чтобы избежать ошибок\e[0m"
-
-    certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty || { echo "Ошибка настройки Certbot"; exit 1; }
-
-    echo "$NGINX_CHECK_MSG"
-    nginx -t || { echo "Тест конфигурации Nginx провален"; exit 1; }
-
-    echo "$NGINX_RESTART_MSG"
-    systemctl restart nginx || { echo "Ошибка перезапуска Nginx"; exit 1; }
-
-    echo "$RENEW_TEST_MSG"
-    certbot renew --dry-run || echo "Предупреждение: тестовое продление сертификата завершилось с ошибкой, проверьте вручную (certbot renew --dry-run)."
-}
-
-# Начало
 echo "=================================================="
-echo -e "\e[33m $TITLE \e[0m"
-echo -e "\e[33m ███    ██  ██████  ██    ██ ██      ██    ██ \e[0m"
-echo -e "\e[33m ████   ██ ██       ██    ██ ██      ██    ██ \e[0m"
-echo -e "\e[33m ██ ██  ██ ██   ███ ██    ██ ██      ██    ██ \e[0m"
-echo -e "\e[33m ██  ██ ██ ██    ██ ██    ██ ██      ██    ██ \e[0m"
-echo -e "\e[33m ██   ████  ██████   ██████  ███████  ██████  \e[0m"
+echo "$DONE_MSG$DOMAIN"
+echo "$FILES_MSG"
+echo "$CMDS_MSG"
 echo "=================================================="
-echo -e "\e[36m$START_MSG\e[0m"
-
-# Настройка файрвола (5678 наружу пока не открываем — он нужен только для локального проксирования Nginx)
-if command -v ufw &> /dev/null; then
-    echo "$UFW_MSG"
-    ufw allow OpenSSH || { echo "Ошибка настройки UFW"; exit 1; }
-    ufw allow 80 || { echo "Ошибка настройки UFW"; exit 1; }
-    ufw allow 443 || { echo "Ошибка настройки UFW"; exit 1; }
-    ufw --force enable || { echo "Ошибка включения UFW"; exit 1; }
-    ufw status
-else
-    echo "Предупреждение: UFW не найден, пропускаем настройку файрвола."
-fi
-
-# Запрос домена
-while true; do
-    echo "--------------------------------------------------"
-    echo -e "\e[33m$DOMAIN_PROMPT\e[0m"
-    read DOMAIN < /dev/tty
-    echo "--------------------------------------------------"
-
-    if [ -z "$DOMAIN" ]; then
-        echo -e "\e[33m$DOMAIN_EMPTY_MSG\e[0m"
-        echo -e "\e[33m$DOMAIN_RETRY\e[0m"
-        echo -e "\e[33m$DOMAIN_EXIT\e[0m"
-        read -p "Выберите (1 или 2): " CHOICE < /dev/tty
-        case $CHOICE in
-            1) continue ;;
-            2) echo "$EXIT_MSG"; exit 0 ;;
-            *) echo "$INVALID_CHOICE" ;;
-        esac
-    elif ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}(\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61})*\.[a-zA-Z]{2,}$ ]]; then
-        echo -e "\e[33m$INVALID_DOMAIN\e[0m"
-        continue
-    else
-        echo "$DOMAIN_ACCEPTED_PREFIX $DOMAIN"
-        break
-    fi
-done
-
-# Установка
-install_base
-setup_node
-install_n8n
-configure_nginx
-setup_certbot
-
-# Закрываем прямой доступ к 5678 снаружи — весь трафик идёт через Nginx на 443
-if command -v ufw &> /dev/null; then
-    echo "$FIREWALL_CLOSE_MSG"
-    ufw delete allow 5678 2>/dev/null || true
-    ufw status
-fi
-
-# Проверка портов
-echo "$PORT_CHECK_MSG"
-ss -tuln | grep 80
-ss -tuln | grep 443
-ss -tuln | grep 5678
-
-# Очистка
-echo "$CLEAN_MSG"
-apt autoremove -y && apt clean || { echo "Ошибка очистки"; exit 1; }
-
-# Завершение
-echo "=================================================="
-echo -e "\e[33m $END_TITLE \e[0m"
-echo -e "\e[33m ███    ██  ██████  ██    ██ ██      ██    ██ \e[0m"
-echo -e "\e[33m ████   ██ ██       ██    ██ ██      ██    ██ \e[0m"
-echo -e "\e[33m ██ ██  ██ ██   ███ ██    ██ ██      ██    ██ \e[0m"
-echo -e "\e[33m ██  ██ ██ ██    ██ ██    ██ ██      ██    ██ \e[0m"
-echo -e "\e[33m ██   ████  ██████   ██████  ███████  ██████  \e[0m"
-echo "=================================================="
-
-if [ "$LANG_CHOICE" = "1" ]; then
-    echo -e "\e[36mInstallation completed! Check: https://$DOMAIN\e[0m"
-else
-    echo -e "\e[36mУстановка завершена! Проверьте: https://$DOMAIN\e[0m"
-fi
-
-exit 0
