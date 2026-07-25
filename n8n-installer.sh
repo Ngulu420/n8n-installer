@@ -44,6 +44,7 @@ if [ "$LANG_CHOICE" = "1" ]; then
     DNS_CHECK_MSG="Checking that the domain points to this server's IP..."
     DNS_MISMATCH="Warning: domain does not appear to resolve to this server's public IP yet. Certbot will likely fail."
     DNS_CONFIRM="Continue anyway? (y/N): "
+    CERTBOT_FAIL_HINT="Certbot failed to get a certificate. Check: domain points to this server's IP, ports 80/443 are open (UFW and provider's cloud firewall), and DNS has fully propagated. Re-run manually: certbot --nginx -d $DOMAIN --redirect --no-eff-email"
 else
     DOMAIN_PROMPT="Введите домен (например example.com):"
     INVALID_DOMAIN="Неверный формат домена, попробуй ещё раз."
@@ -65,6 +66,7 @@ else
     DNS_CHECK_MSG="Проверяю, что домен указывает на IP этого сервера..."
     DNS_MISMATCH="Предупреждение: домен пока не резолвится на публичный IP этого сервера. Certbot, скорее всего, упадёт."
     DNS_CONFIRM="Продолжить всё равно? (y/N): "
+    CERTBOT_FAIL_HINT="Certbot не смог получить сертификат. Проверь: домен указывает на IP этого сервера, порты 80/443 открыты (UFW и облачный файрвол провайдера), DNS полностью распространился. Повтори вручную: certbot --nginx -d $DOMAIN --redirect --no-eff-email"
 fi
 
 # ── Домен ─────────────────────────────────────────────
@@ -80,7 +82,7 @@ read -p "$TZ_PROMPT " TZ_INPUT < /dev/tty
 GENERIC_TIMEZONE="${TZ_INPUT:-Etc/UTC}"
 
 # ── DNS pre-check ──────────────────────────────────────
-command -v dig &> /dev/null || apt install -y dnsutils &> /dev/null
+command -v dig &> /dev/null || { apt update &> /dev/null; apt install -y dnsutils &> /dev/null; }
 echo "$DNS_CHECK_MSG"
 SERVER_IP=$(curl -fsSL -4 https://ifconfig.me || true)
 DOMAIN_IP=$(dig +short "$DOMAIN" A | tail -n1 || true)
@@ -213,6 +215,7 @@ echo "$COMPOSE_MSG"
 docker compose up -d || { echo "$COMPOSE_ERROR"; exit 1; }
 
 # ── Nginx (нативно на хосте) ──────────────────────────
+apt update
 apt install -y nginx
 cat << EOF > /etc/nginx/sites-available/n8n
 server {
@@ -240,8 +243,12 @@ nginx -t || { echo "$NGINX_ERROR"; exit 1; }
 systemctl restart nginx
 
 # ── Certbot ───────────────────────────────────────────
+apt update
 apt install -y certbot python3-certbot-nginx
-certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty
+if ! certbot --nginx -d "$DOMAIN" --redirect --no-eff-email < /dev/tty; then
+    echo "$CERTBOT_FAIL_HINT"
+    exit 1
+fi
 nginx -t || { echo "$NGINX_ERROR"; exit 1; }
 systemctl restart nginx
 certbot renew --dry-run || echo "$RENEW_WARN"
