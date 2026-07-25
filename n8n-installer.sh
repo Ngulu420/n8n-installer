@@ -1,10 +1,18 @@
 #!/bin/bash
-set -uo pipefail
+set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 if [ "$EUID" -ne 0 ]; then
     echo "Error: run as root or with sudo. / Запускай от root или через sudo."
     exit 1
+fi
+
+. /etc/os-release
+if [[ "$ID" != "ubuntu" && "$ID" != "debian" ]]; then
+    echo "Warning: this script is tested on Ubuntu/Debian only. Detected: $ID $VERSION_CODENAME."
+    echo "Предупреждение: скрипт рассчитан только на Ubuntu/Debian. Обнаружено: $ID $VERSION_CODENAME."
+    read -p "Continue anyway? / Продолжить всё равно? (y/N): " DISTRO_CONFIRM < /dev/tty
+    [[ "$DISTRO_CONFIRM" =~ ^[Yy]$ ]] || exit 1
 fi
 
 INSTALL_DIR="/opt/n8n"
@@ -30,6 +38,12 @@ if [ "$LANG_CHOICE" = "1" ]; then
     DONE_MSG="Done: https://"
     FILES_MSG="Config files: $INSTALL_DIR (.env contains secrets — keep it safe)"
     CMDS_MSG="Commands: docker compose logs -f n8n | docker compose restart | docker compose pull && docker compose up -d"
+    UFW_CONFIRM="UFW will allow OpenSSH/80/443 and enable itself. This may override existing rules. Continue? (y/N): "
+    ENV_EXISTS_MSG="Existing .env found in $INSTALL_DIR — keeping it as is (not regenerating secrets)."
+    ENV_CONFIRM="This will overwrite an existing installation's secrets in $INSTALL_DIR/.env. Continue? (y/N): "
+    DNS_CHECK_MSG="Checking that the domain points to this server's IP..."
+    DNS_MISMATCH="Warning: domain does not appear to resolve to this server's public IP yet. Certbot will likely fail."
+    DNS_CONFIRM="Continue anyway? (y/N): "
 else
     DOMAIN_PROMPT="Введите домен (например example.com):"
     INVALID_DOMAIN="Неверный формат домена, попробуй ещё раз."
@@ -45,6 +59,12 @@ else
     DONE_MSG="Готово: https://"
     FILES_MSG="Файлы конфига: $INSTALL_DIR (.env содержит пароли — храни в секрете)"
     CMDS_MSG="Команды: docker compose logs -f n8n | docker compose restart | docker compose pull && docker compose up -d"
+    UFW_CONFIRM="UFW разрешит OpenSSH/80/443 и включится. Это может переопределить существующие правила. Продолжить? (y/N): "
+    ENV_EXISTS_MSG="Найден существующий .env в $INSTALL_DIR — оставляю как есть (секреты не перегенерирую)."
+    ENV_CONFIRM="Это перезапишет секреты существующей установки в $INSTALL_DIR/.env. Продолжить? (y/N): "
+    DNS_CHECK_MSG="Проверяю, что домен указывает на IP этого сервера..."
+    DNS_MISMATCH="Предупреждение: домен пока не резолвится на публичный IP этого сервера. Certbot, скорее всего, упадёт."
+    DNS_CONFIRM="Продолжить всё равно? (y/N): "
 fi
 
 # ── Домен ─────────────────────────────────────────────
@@ -58,6 +78,17 @@ done
 
 read -p "$TZ_PROMPT " TZ_INPUT < /dev/tty
 GENERIC_TIMEZONE="${TZ_INPUT:-Etc/UTC}"
+
+# ── DNS pre-check ──────────────────────────────────────
+command -v dig &> /dev/null || apt install -y dnsutils &> /dev/null
+echo "$DNS_CHECK_MSG"
+SERVER_IP=$(curl -fsSL -4 https://ifconfig.me || true)
+DOMAIN_IP=$(dig +short "$DOMAIN" A | tail -n1 || true)
+if [ -z "$SERVER_IP" ] || [ -z "$DOMAIN_IP" ] || [ "$SERVER_IP" != "$DOMAIN_IP" ]; then
+    echo "$DNS_MISMATCH ($DOMAIN -> ${DOMAIN_IP:-none}, server -> ${SERVER_IP:-unknown})"
+    read -p "$DNS_CONFIRM" DNS_CONFIRM_ANSWER < /dev/tty
+    [[ "$DNS_CONFIRM_ANSWER" =~ ^[Yy]$ ]] || exit 1
+fi
 
 # ── Docker Engine + Compose plugin (официальный apt-репозиторий) ──
 if ! command -v docker &> /dev/null; then
@@ -79,6 +110,8 @@ fi
 
 # ── UFW ───────────────────────────────────────────────
 if command -v ufw &> /dev/null; then
+    read -p "$UFW_CONFIRM" UFW_CONFIRM_ANSWER < /dev/tty
+    if [[ "$UFW_CONFIRM_ANSWER" =~ ^[Yy]$ ]]; then
     echo "$UFW_MSG"
     ufw allow OpenSSH
     ufw allow 80
@@ -86,6 +119,7 @@ if command -v ufw &> /dev/null; then
     ufw --force enable
     # Порт 5678 намеренно НЕ открываем — контейнер слушает только 127.0.0.1,
     # доступ снаружи идёт исключительно через Nginx на 443.
+    fi
 else
     echo "$UFW_SKIP"
 fi
@@ -94,16 +128,31 @@ fi
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-POSTGRES_PASSWORD=$(openssl rand -hex 20)
-N8N_ENCRYPTION_KEY=$(openssl rand -hex 32)
-
-cat > "$INSTALL_DIR/.env" << EOF
+if [ -f "$INSTALL_DIR/.env" ]; then
+    echo "$ENV_EXISTS_MSG"
+    read -p "$ENV_CONFIRM" ENV_CONFIRM_ANSWER < /dev/tty
+    if [[ "$ENV_CONFIRM_ANSWER" =~ ^[Yy]$ ]]; then
+        POSTGRES_PASSWORD=$(openssl rand -hex 20)
+        N8N_ENCRYPTION_KEY=$(openssl rand -hex 32)
+        cat > "$INSTALL_DIR/.env" << EOF
 DOMAIN=$DOMAIN
 GENERIC_TIMEZONE=$GENERIC_TIMEZONE
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 N8N_ENCRYPTION_KEY=$N8N_ENCRYPTION_KEY
 EOF
-chmod 600 "$INSTALL_DIR/.env"
+        chmod 600 "$INSTALL_DIR/.env"
+    fi
+else
+    POSTGRES_PASSWORD=$(openssl rand -hex 20)
+    N8N_ENCRYPTION_KEY=$(openssl rand -hex 32)
+    cat > "$INSTALL_DIR/.env" << EOF
+DOMAIN=$DOMAIN
+GENERIC_TIMEZONE=$GENERIC_TIMEZONE
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+N8N_ENCRYPTION_KEY=$N8N_ENCRYPTION_KEY
+EOF
+    chmod 600 "$INSTALL_DIR/.env"
+fi
 
 cat > "$INSTALL_DIR/docker-compose.yml" << 'EOF'
 services:
@@ -169,6 +218,7 @@ cat << EOF > /etc/nginx/sites-available/n8n
 server {
     listen 80;
     server_name $DOMAIN;
+    client_max_body_size 50M;
     location / {
         proxy_pass http://127.0.0.1:5678;
         proxy_set_header Host \$host;
@@ -178,6 +228,9 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
     }
 }
 EOF
