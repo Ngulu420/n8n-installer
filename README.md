@@ -1,133 +1,110 @@
-# Скрипт установки n8n на сервер / n8n Server Installation Script
+# n8n-installer
 
-Установите `n8n` на ваш сервер за пару минут с помощью этого скрипта.
+n8n-installer — автоматическая установка n8n + Postgres в Docker с Nginx и Let's Encrypt.
 
----
+Простая установка (одна команда)
+--------------------------------
+Скопируйте и вставьте эту одну строку в терминал на вашем сервере (будет скачан и запущен скрипт как root):
 
-## Описание / Description
-
-**Русский**:
-- Этот скрипт автоматизирует установку `n8n` в Docker с Postgres, настраивает Nginx как обратный прокси и получает SSL сертификат через Let's Encrypt (Certbot).
-
-**English**:
-- This script automates installing `n8n` in Docker with Postgres, configures Nginx as a reverse proxy and obtains an SSL certificate using Let's Encrypt (Certbot).
-
----
-
-## Короткая установка (одна команда) / One-line install
-
-Скопируйте и вставьте в терминал сервера (выполнится от root через sudo):
-
-```bash
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/main/n8n-installer.sh)"
-```
 
-Примечание: эта команда загружает и запускает скрипт напрямую с GitHub. Проверьте содержимое перед запуском, если вы сомневаетесь.
+Кратко (RU)
+------------
+Что делает
+- Устанавливает Docker (официальный репозиторий для Ubuntu), создаёт docker-compose с Postgres + n8n, устанавливает nginx как обратный прокси и запускает certbot (Let's Encrypt).
+- Генерирует POSTGRES_PASSWORD и N8N_ENCRYPTION_KEY и записывает их в `/opt/n8n/.env`.
+- На хосте конфиг в `/etc/nginx/sites-available/n8n` проксирует запросы на `http://127.0.0.1:5678`.
 
----
+Ключевые моменты текущей версии
+- Скрипт интерактивен: выбор языка (EN / RU), ввод домена и часового пояса.
+- Certbot запускается интерактивно и читает с `/dev/tty`.
+- .env генерируется и перезаписывается при каждом запуске скрипта (если это нежелательно — сделайте резервную копию `/opt/n8n/.env` перед запуском).
+- Nginx конфиг настроен на WebSocket-совместимость и имеет базовые таймауты.
+- Скрипт ориентирован на Ubuntu/Debian-подобные системы и использует apt.
 
-## Что делает скрипт / What the script does
-
-- Устанавливает Docker из официального репозитория (для Ubuntu/Debian-подобных систем) — только если Docker не найден.
-- Генерирует `POSTGRES_PASSWORD` и `N8N_ENCRYPTION_KEY` и записывает их в `/opt/n8n/.env`.
-- Создаёт `docker-compose.yml` и запускает `docker compose up -d` с сервисами `postgres` и `n8n`.
-- Устанавливает Nginx на хосте и пишет конфигурацию в `/etc/nginx/sites-available/n8n`, проксируя запросы на `http://127.0.0.1:5678`.
-- Запускает Certbot (Let's Encrypt) в интерактивном режиме (читает с `/dev/tty`) для получения сертификата и настройки редиректа на HTTPS.
-- Проводит базовую настройку UFW (если доступен), открывает OpenSSH/80/443 по подтверждению пользователя.
-- Обеспечивает базовые nginx-таймауты и WebSocket-совместимость.
-
----
-
-## Ключевые особенности последней версии / Key improvements in the latest version
-
-- Выбор языка (RU / EN) при установке.
-- Скрипт обновляет apt-кэш перед установкой системных пакетов (страх от 404 при устаревшем кэше).
-- DNS pre-check перед вызовом certbot: скрипт проверяет наличие A/AAAA-записи для введённого домена и сравнивает с публичным IP сервера, предупреждая при несоответствии.
-- Certbot запускается интерактивно через `/dev/tty` (нужно ввести email/принять условия при первом запуске) — это намеренно, чтобы не регистрировать email по умолчанию.
-- `.env` создаётся в `/opt/n8n/.env` и в текущей версии скрипта перезаписывается при каждом запуске (сгенерированные пароли/ключи заменяются). Сделайте резервную копию, если хотите сохранить текущие секреты.
-- Подтверждение перед включением UFW, чтобы не заблокировать SSH-доступ.
-
----
-
-## Требования / Requirements
-
+Требования
 - Ubuntu / Debian-подобная система (apt).
-- Доменное имя с A/AAAA-записью, указывающей на IP сервера.
-- root / sudo права.
-- Порты 80 и 443 должны быть доступны извне (для получения сертификата).
-- Доступ в интернет для загрузки образов и пакетов.
+- Домен с A/AAAA-записью, указывающей на сервер.
+- Root-права (запуск через sudo).
+- Порты 80 и 443 должны быть доступны извне для получения сертификата.
 
----
+Перед запуском — проверки
+- Убедитесь, что у домена есть A/AAAA-запись на IP сервера.
+- При проблемах с apt (404) — выполните `sudo apt update` и повторите запуск.
+- Скрипт запускает интерактивный certbot; если вы хотите полностью автоматизировать, модифицируйте команду certbot внутри скрипта и добавьте `--agree-tos --non-interactive --email "you@example.com"`.
 
-## Перед запуском — рекомендации / Before you run
+Краткая инструкция по использованию
+1. Склонируйте репозиторий (опционально):
+   git clone https://github.com/Ngulu420/n8n-installer.git
+2. Запустите (рекомендуемый однострочник):
+   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/main/n8n-installer.sh)"
+3. Следуйте подсказкам: язык → домен → часовой пояс.
 
-- Проверьте, что домен указывает на ваш сервер (A/AAAA).
-- Если вы хотите сохранить текущие секреты, создайте резервную копию `/opt/n8n/.env` перед запуском, так как скрипт перезапишет его при выполнении.
-- Для полностью без‑интерактивного режима сертификатов можно править команду certbot в скрипте, добавив `--agree-tos --non-interactive --email "you@example.com"` (по умолчанию скрипт оставляет certbot интерактивным).
-
----
-
-## Использование / Usage
-
-1. (Опционально) Склонируйте репозиторий:
-
-```bash
-git clone https://github.com/Ngulu420/n8n-installer.git
-```
-
-2. Запустите одиночную команду (рекомендуется):
-
-```bash
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/main/n8n-installer.sh)"
-```
-
-3. Следуйте подсказкам (язык → домен → часовой пояс → подтверждения).
-
----
-
-## Отладка / Troubleshooting
-
-- Certbot не смог получить сертификат: проверьте DNS (A/AAAA) и доступность портов 80/443 извне (провайдер/хост может блокировать).
-- apt install возвращает 404: выполните `sudo apt update` и перезапустите скрипт.
+Точки внимания / отладка
+- Если certbot не может получить сертификат: проверьте DNS и доступность портов 80/443 (провайдер может блокировать).
+- Если apt падает с 404: выполните `sudo apt update` и перезапустите скрипт.
 - Просмотр логов контейнеров:
+  - docker compose logs -f n8n
+  - docker compose logs -f postgres
 
-```bash
-docker compose logs -f n8n
+Безопасность
+- Файл `/opt/n8n/.env` содержит секреты и создаётся с правами 600.
+- Если не хотите перезаписывать существующие секреты, создайте резервную копию `/opt/n8n/.env` перед запуском.
+- Рекомендуется регулярно бекапить Postgres-том (pg_dump или экспорт тома).
 
-docker compose logs -f postgres
-```
+Обновление и бэкап
+- Обновить образы:
+  docker compose pull && docker compose up -d
+- Бекап Postgres (пример):
+  docker exec -t <postgres_container> pg_dumpall -c -U n8n > dump_$(date +%F).sql
 
----
+------------
 
-## Резервное копирование и обновление / Backups & updates
+README (English)
+----------------
 
-- Обновить образы и перезапустить:
+Quick install (single command)
+------------------------------
+Copy and paste this single line into your server terminal (it downloads and runs the script as root):
 
-```bash
-docker compose pull && docker compose up -d
-```
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/main/n8n-installer.sh)"
 
-- Пример бэкапа Postgres:
+Overview
+--------
+What it does
+- Installs Docker (official repo for Ubuntu), deploys Postgres + n8n using Docker Compose, configures nginx as a reverse proxy and runs certbot (Let's Encrypt).
+- Generates POSTGRES_PASSWORD and N8N_ENCRYPTION_KEY and writes them to `/opt/n8n/.env`.
+- Nginx on the host proxies to `http://127.0.0.1:5678` (n8n runs bound to localhost).
 
-```bash
-docker exec -t <postgres_container> pg_dumpall -c -U n8n > dump_$(date +%F).sql
-```
+Current script behavior
+- Interactive: language selection (EN/RU), domain and timezone prompts.
+- Certbot is run interactively through `/dev/tty`.
+- `.env` is generated/overwritten on each run — back it up if you want to preserve secrets.
+- Script targets Ubuntu/Debian-like systems (uses apt).
 
----
+Requirements
+- Ubuntu / Debian-like OS
+- Domain name pointing to the server
+- Root privileges (use sudo)
+- Ports 80 and 443 open and reachable from the internet
 
-## Безопасность / Security
+Before you run
+- Make sure your domain has A/AAAA record to your server IP.
+- If apt install fails with 404, run `sudo apt update` and re-run the script.
+- For non-interactive certbot, modify the certbot call to include `--agree-tos --non-interactive --email "you@example.com"`.
 
-- `/opt/n8n/.env` содержит секреты и создаётся с правами 600 — храните и бекапьте его в безопасном месте.
-- Рассмотрите добавление fail2ban, регулярных бэкапов и мониторинга.
+Usage
+1. (optional) git clone https://github.com/Ngulu420/n8n-installer.git
+2. Run (recommended single-line):
+   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ngulu420/n8n-installer/main/n8n-installer.sh)"
+3. Follow the prompts.
 
----
+Troubleshooting
+- Certbot fails: check DNS and that ports 80/443 are reachable externally.
+- apt 404: run `sudo apt update` then retry.
+- Check container logs for n8n and postgres with docker compose logs.
 
-## Лицензия / License
+Security & backups
+- `/opt/n8n/.env` contains secrets; protect and backup it.
+- Backup Postgres data regularly (pg_dump or export the docker volume).
 
-Лицензия проекта хранится отдельно в файле LICENSE — не редактируйте её здесь.
-
----
-
-## Автор / Author
-
-`Ngulu`
