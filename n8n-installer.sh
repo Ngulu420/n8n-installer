@@ -130,6 +130,11 @@ setup_node() {
 # Установка n8n и PM2
 install_n8n() {
     echo "$N8N_MSG"
+    # Новые версии npm (12+) по умолчанию блокируют установку зависимостей,
+    # которые качаются не с npm-реестра, а по прямой ссылке (allow-remote=none).
+    # У n8n одна из зависимостей (xlsx/SheetJS) официально распространяется
+    # именно так — с cdn.sheetjs.com, а не через npm registry. Разрешаем это явно.
+    npm config set allow-remote all -g
     npm install -g "n8n@${N8N_VERSION}" || { echo "Ошибка установки n8n"; exit 1; }
     n8n --version
 
@@ -137,7 +142,7 @@ install_n8n() {
     npm install -g pm2 || { echo "Ошибка установки PM2"; exit 1; }
 
     echo "$N8N_START_MSG"
-    if ss -tuln | grep -q ":5678"; then
+    if ss -tuln | grep -E "LISTEN.*:5678\s" &>/dev/null; then
         echo "$PORT_ERROR"
         exit 1
     fi
@@ -234,12 +239,16 @@ echo "=================================================="
 echo -e "\e[36m$START_MSG\e[0m"
 
 # Настройка файрвола (5678 наружу пока не открываем — он нужен только для локального проксирования Nginx)
-echo "$UFW_MSG"
-ufw allow OpenSSH || { echo "Ошибка настройки UFW"; exit 1; }
-ufw allow 80 || { echo "Ошибка настройки UFW"; exit 1; }
-ufw allow 443 || { echo "Ошибка настройки UFW"; exit 1; }
-ufw --force enable || { echo "Ошибка включения UFW"; exit 1; }
-ufw status
+if command -v ufw &> /dev/null; then
+    echo "$UFW_MSG"
+    ufw allow OpenSSH || { echo "Ошибка настройки UFW"; exit 1; }
+    ufw allow 80 || { echo "Ошибка настройки UFW"; exit 1; }
+    ufw allow 443 || { echo "Ошибка настройки UFW"; exit 1; }
+    ufw --force enable || { echo "Ошибка включения UFW"; exit 1; }
+    ufw status
+else
+    echo "Предупреждение: UFW не найден, пропускаем настройку файрвола."
+fi
 
 # Запрос домена
 while true; do
@@ -275,9 +284,11 @@ configure_nginx
 setup_certbot
 
 # Закрываем прямой доступ к 5678 снаружи — весь трафик идёт через Nginx на 443
-echo "$FIREWALL_CLOSE_MSG"
-ufw delete allow 5678 2>/dev/null || true
-ufw status
+if command -v ufw &> /dev/null; then
+    echo "$FIREWALL_CLOSE_MSG"
+    ufw delete allow 5678 2>/dev/null || true
+    ufw status
+fi
 
 # Проверка портов
 echo "$PORT_CHECK_MSG"
